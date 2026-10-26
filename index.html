@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkillStream Learning Platform</title>
+    <meta name="description" content="Premium multi-course learning platform and course management system with YouTube playlist imports, video uploads, and admin CMS." />
+    <meta property="og:title" content="SkillStream Learning Platform" />
+    <meta property="og:description" content="Premium multi-course learning platform and course management system with YouTube playlist imports, video uploads, and admin CMS." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&family=Readex+Pro:wght@400;500;600;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+    <script>
+      // Prevent benign WebSocket connection rejection from crashing preview
+      window.addEventListener('unhandledrejection', function(event) {
+        var str = '' + (event && (event.reason ? (event.reason.message || event.reason) : ''));
+        if (str.indexOf('WebSocket') !== -1 || str.indexOf('[vite]') !== -1) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+      window.addEventListener('error', function(event) {
+        var msg = '' + (event && event.message ? event.message : '');
+        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

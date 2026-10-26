@@ -1,0 +1,6 @@
+{
+  "name": "SkillStream Learning Platform",
+  "description": "Premium multi-course learning platform and course management system with YouTube playlist imports, video uploads, and admin CMS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
