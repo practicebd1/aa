@@ -1,4 +1,5 @@
 import { Course, Section, Lesson, PlaylistRecord, AuditLog, PlatformSettings, DashboardStats, AdminUser, SupabaseStatus } from '../types';
+import { fallbackCourses, fallbackSections, fallbackLessons, fallbackSettings, getFallbackCourseWithContent } from '../data/fallbackData';
 
 const API_BASE = '/api';
 
@@ -61,23 +62,61 @@ export const api = {
 
   // Courses
   async getCourses(params?: { includeDrafts?: boolean; category?: string; level?: string; search?: string }): Promise<Course[]> {
-    const query = new URLSearchParams();
-    if (params?.includeDrafts) query.append('includeDrafts', 'true');
-    if (params?.category && params.category !== 'All') query.append('category', params.category);
-    if (params?.level && params.level !== 'All Levels') query.append('level', params.level);
-    if (params?.search) query.append('search', params.search);
+    try {
+      const query = new URLSearchParams();
+      if (params?.includeDrafts) query.append('includeDrafts', 'true');
+      if (params?.category && params.category !== 'All') query.append('category', params.category);
+      if (params?.level && params.level !== 'All Levels') query.append('level', params.level);
+      if (params?.search) query.append('search', params.search);
 
-    const res = await fetch(`${API_BASE}/courses?${query.toString()}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch courses.');
-    return data.courses;
+      const res = await fetch(`${API_BASE}/courses?${query.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.courses)) {
+          return data.courses;
+        }
+      }
+    } catch {
+      // Server not reachable (e.g. GitHub Pages static deployment)
+    }
+
+    // Static fallback for GitHub Pages
+    let results = [...fallbackCourses];
+    if (!params?.includeDrafts) {
+      results = results.filter((c) => c.status === 'published');
+    }
+    if (params?.category && params.category !== 'All') {
+      results = results.filter((c) => c.category === params.category);
+    }
+    if (params?.level && params.level !== 'All Levels') {
+      results = results.filter((c) => c.level === params.level);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      results = results.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.shortDescription?.toLowerCase().includes(q) ||
+          c.category?.toLowerCase().includes(q)
+      );
+    }
+    return results;
   },
 
   async getCourse(slugOrId: string, includeDrafts: boolean = false): Promise<Course> {
-    const res = await fetch(`${API_BASE}/courses/${slugOrId}${includeDrafts ? '?includeDrafts=true' : ''}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Course not found.');
-    return data.course;
+    try {
+      const res = await fetch(`${API_BASE}/courses/${slugOrId}${includeDrafts ? '?includeDrafts=true' : ''}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.course) return data.course;
+      }
+    } catch {
+      // Server not reachable
+    }
+
+    const fallback = getFallbackCourseWithContent(slugOrId);
+    if (fallback) return fallback;
+    throw new Error('Course not found.');
   },
 
   async createCourse(courseData: Partial<Course>): Promise<Course> {
@@ -335,10 +374,16 @@ export const api = {
   },
 
   async getSettings(): Promise<PlatformSettings> {
-    const res = await fetch(`${API_BASE}/settings`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to load settings.');
-    return data.settings;
+    try {
+      const res = await fetch(`${API_BASE}/settings`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.settings) return data.settings;
+      }
+    } catch {
+      // Fallback
+    }
+    return fallbackSettings;
   },
 
   async updateSettings(updates: Partial<PlatformSettings & { youtubeApiKey?: string }>): Promise<PlatformSettings> {
@@ -353,17 +398,45 @@ export const api = {
   },
 
   async search(query: string): Promise<{ courses: Course[]; sections: any[]; lessons: any[] }> {
-    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Search query failed.');
-    return data;
+    try {
+      const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.courses) return data;
+      }
+    } catch {
+      // Fallback
+    }
+
+    const q = query.toLowerCase().trim();
+    if (!q) return { courses: [], sections: [], lessons: [] };
+    const matchedCourses = fallbackCourses.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.shortDescription?.toLowerCase().includes(q) ||
+        c.category?.toLowerCase().includes(q)
+    );
+    const matchedLessons = fallbackLessons.filter(
+      (l) => l.title.toLowerCase().includes(q) || l.description?.toLowerCase().includes(q)
+    );
+    return { courses: matchedCourses, sections: [], lessons: matchedLessons };
   },
 
   async getCategories(): Promise<string[]> {
-    const res = await fetch(`${API_BASE}/categories`);
-    const data = await res.json();
-    if (!res.ok) return ['All', 'Digital Marketing', 'Google Ads', 'SEO', 'Analytics', 'Freelancing & Marketing'];
-    return data.categories;
+    try {
+      const res = await fetch(`${API_BASE}/categories`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.categories)) return data.categories;
+      }
+    } catch {
+      // Fallback
+    }
+    const categoriesSet = new Set<string>();
+    fallbackCourses.forEach((c) => {
+      if (c.category) categoriesSet.add(c.category);
+    });
+    return ['All', ...Array.from(categoriesSet)];
   },
 
   // Supabase Backend Integration

@@ -52,10 +52,34 @@ function MainApp() {
     loadCourses();
   }, [isAuthenticated]);
 
+  // Helper to determine base path on GitHub Pages (e.g. /aa or /bro)
+  const getBasePath = () => {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const knownRoutes = ['admin', 'courses', 'about', 'contact'];
+    if (parts.length > 0 && !knownRoutes.includes(parts[0])) {
+      return `/${parts[0]}`;
+    }
+    return '';
+  };
+
+  const getRelativePath = () => {
+    // Check hash first
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash.startsWith('/')) {
+      return hash;
+    }
+    let path = window.location.pathname;
+    const basePath = getBasePath();
+    if (basePath && path.startsWith(basePath)) {
+      path = path.slice(basePath.length) || '/';
+    }
+    return path;
+  };
+
   // Handle URL hash / path navigation
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
+      const path = getRelativePath();
       if (path.startsWith('/admin/login')) {
         setCurrentView('login');
       } else if (path.startsWith('/admin')) {
@@ -77,7 +101,11 @@ function MainApp() {
 
     handlePopState();
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
   // Global keyboard shortcut for search (⌘K or Ctrl+K)
@@ -94,34 +122,35 @@ function MainApp() {
 
   const navigateTo = (view: string, param?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const basePath = getBasePath();
 
     if (view === 'course' && param) {
       setSelectedCourseSlug(param);
       setCurrentView('course');
-      window.history.pushState({}, '', `/courses/${param}`);
+      window.history.pushState({}, '', `${basePath}/courses/${param}`);
     } else if (view === 'courses') {
       setCurrentView('courses');
-      window.history.pushState({}, '', '/courses');
+      window.history.pushState({}, '', `${basePath}/courses`);
     } else if (view === 'about') {
       setCurrentView('about');
-      window.history.pushState({}, '', '/about');
+      window.history.pushState({}, '', `${basePath}/about`);
     } else if (view === 'contact') {
       setCurrentView('contact');
-      window.history.pushState({}, '', '/contact');
+      window.history.pushState({}, '', `${basePath}/contact`);
     } else if (view === 'login') {
       setCurrentView('login');
-      window.history.pushState({}, '', '/admin/login');
+      window.history.pushState({}, '', `${basePath}/admin/login`);
     } else if (view === 'admin') {
       if (!isAuthenticated) {
         setCurrentView('login');
-        window.history.pushState({}, '', '/admin/login');
+        window.history.pushState({}, '', `${basePath}/admin/login`);
       } else {
         setCurrentView('admin');
-        window.history.pushState({}, '', '/admin');
+        window.history.pushState({}, '', `${basePath}/admin`);
       }
     } else {
       setCurrentView('home');
-      window.history.pushState({}, '', '/');
+      window.history.pushState({}, '', `${basePath}/`);
     }
   };
 
