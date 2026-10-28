@@ -18,24 +18,67 @@ function getHeaders(extraHeaders: Record<string, string> = {}) {
 export const api = {
   // Auth
   async login(email: string, password: string): Promise<{ token: string; user: AdminUser }> {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed.');
-    localStorage.setItem('skillstream_admin_token', data.token);
-    return data;
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('skillstream_admin_token', data.token);
+        return data;
+      }
+    } catch {
+      // Backend not running (e.g. GitHub Pages static deployment)
+    }
+
+    // Static fallback authentication for GitHub Pages
+    const normalizedEmail = email.trim().toLowerCase();
+    if (
+      (normalizedEmail === 'ahmadshiblibd@gmail.com' || normalizedEmail === 'admin@example.com') &&
+      password === 'aaZZ##00<>'
+    ) {
+      const fallbackUser: AdminUser = {
+        id: 'usr_admin_01',
+        email: 'ahmadshiblibd@gmail.com',
+        name: 'Ahmad Shibli (Admin)',
+        role: 'super_admin',
+        createdAt: new Date().toISOString()
+      };
+      const token = 'static_gh_pages_admin_token_' + Date.now();
+      localStorage.setItem('skillstream_admin_token', token);
+      localStorage.setItem('skillstream_admin_user', JSON.stringify(fallbackUser));
+      return { token, user: fallbackUser };
+    }
+
+    throw new Error('Invalid administrator email or password.');
   },
 
   async getMe(): Promise<{ user: AdminUser }> {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: getHeaders()
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Authentication error.');
-    return data;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data;
+      }
+    } catch {
+      // Fallback
+    }
+
+    const cachedUser = localStorage.getItem('skillstream_admin_user');
+    const token = localStorage.getItem('skillstream_admin_token');
+    if (token && cachedUser) {
+      try {
+        return { user: JSON.parse(cachedUser) };
+      } catch {
+        // ignore
+      }
+    }
+
+    throw new Error('Authentication error.');
   },
 
   async logout(): Promise<void> {
@@ -44,8 +87,11 @@ export const api = {
         method: 'POST',
         headers: getHeaders()
       });
+    } catch {
+      // Backend not running
     } finally {
       localStorage.removeItem('skillstream_admin_token');
+      localStorage.removeItem('skillstream_admin_user');
     }
   },
 
