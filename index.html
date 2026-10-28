@@ -30,6 +30,16 @@
       });
     </script>
     <script>
+      // Ensure trailing slash on GitHub Pages root path (e.g. /aa -> /aa/)
+      // so relative assets './assets/...' resolve to /aa/assets/... instead of domain root
+      (function() {
+        var p = window.location.pathname;
+        if (p && !p.endsWith('/') && !p.split('/').pop().includes('.')) {
+          window.location.replace(p + '/' + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
+    <script>
       // Single Page App redirect decoder for GitHub Pages
       (function(l) {
         if (l.search[1] === '/' ) {
